@@ -19,10 +19,18 @@ class Network {
       layer.push(neuron);
     }
     this.network.push(layer);
+
+    this.coeffPast = 0;
+    this.weightDerivativesPast = this.network.map((layer) =>
+      layer.map((neuron) => neuron.map(() => 0))
+    );
+    this.weightDerivativesPresent = this.network.map((layer) =>
+      layer.map((neuron) => neuron.map(() => 0))
+    );
   }
 
   activationFunction(x) {
-    return 1 / (1 + Math.exp(-x));
+    return 1 / (1 + Math.exp(-1 * 0.3 * x));
   }
 
   derivative(x) {
@@ -54,13 +62,14 @@ class Network {
     );
     for (let index = this.network.length - 2; index >= 0; index--) {
       deltas.push(
-        this.network[index].map((neuron, i) =>
-          this.network[index + 1]
-            .map((nextLayerNeuron) => nextLayerNeuron[i + 1])
-            .reduce(
-              (acc, weigth, n) => acc + deltas[deltas.length - 1][n] * weigth,
-              0
-            )
+        this.network[index].map(
+          (neuron, i) =>
+            this.network[index + 1]
+              .map((nextLayerNeuron) => nextLayerNeuron[i + 1])
+              .reduce(
+                (acc, weigth, n) => acc + deltas[deltas.length - 1][n] * weigth,
+                0
+              ) * input.derivatives[index][i]
         )
       );
     }
@@ -93,25 +102,42 @@ class Network {
     return tecnicalTable;
   }
 
-  calcWeigth(techData, coeff) {
-    let tmp = this.network.slice();
+  calcWeigthDerivatives(techData) {
+    let weightDerivatives = JSON.parse(JSON.stringify(this.network));
     this.network.forEach((layer, i) =>
       layer.forEach((neuron, j) =>
         neuron.forEach((weigth, k) => {
-          tmp[i][j][k] =
-            weigth -
-            coeff *
-              techData.deltas[i][j] *
-              techData.intermediateCalculations[i][k];
+          weightDerivatives[i][j][k] =
+            techData.deltas[i][j] * techData.intermediateCalculations[i][k];
         })
       )
     );
-    this.network = tmp;
+    this.weightDerivativesPresent = weightDerivatives;
   }
 
-  train(trainSequence, trainCoeff, iterations, dataReturnCallback = () => {}) {
+  fastDescent(coeff, momentum) {
+    this.network = this.network.map((layer, i) =>
+      layer.map((neuron, j) =>
+        neuron.map(
+          (weigth, k) =>
+            weigth -
+            this.weightDerivativesPresent[i][j][k] * coeff -
+            momentum * (this.coeffPast * this.weightDerivativesPast[i][j][k])
+        )
+      )
+    );
+  }
+
+  train(
+    trainSequence,
+    trainCoeff,
+    iterations,
+    dataReturnCallback = () => {},
+    momentum = 0
+  ) {
     let iter = 0;
     let error = 0;
+    let graph = [];
     do {
       error = 0;
       trainSequence.forEach((trainSample) => {
@@ -125,14 +151,20 @@ class Network {
         });
 
         let back = this.backward(forward);
-        this.calcWeigth(back, trainCoeff);
+        this.calcWeigthDerivatives(back);
+        this.fastDescent(trainCoeff / (1 + iter / iterations), momentum);
+        this.coeffPast = trainCoeff / (1 + iter / iterations);
+        this.weightDerivativesPast = JSON.parse(
+          JSON.stringify(this.weightDerivativesPresent)
+        );
         error += forward.subs.reduce((acc, e) => acc + e ** 2, 0);
       });
-      error /= 2;
+      error /= trainSequence.length - 1;
+      error = Math.sqrt(error);
       iter++;
-      dataReturnCallback(iter, error);
-      
-    } while (iter < iterations && error > 0.0001);
+      graph.push({ x: iter, y: error });
+    } while (iter < iterations && error > 0.08);
+    dataReturnCallback(graph);
   }
 }
 
