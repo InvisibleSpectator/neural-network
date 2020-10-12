@@ -11,10 +11,18 @@ class Network {
       }
       this.network.push(layer);
     }
+
     const layer = [];
     for (let j = 0; j < outputCounts; j++) {
       const neuron = [];
-      for (let k = 0; k <= this.network[this.network.length - 1].length; k++)
+      for (
+        let k = 0;
+        k <=
+        (this.network.length > 0
+          ? this.network[this.network.length - 1].length
+          : inputCounts);
+        k++
+      )
         neuron.push(Math.random());
       layer.push(neuron);
     }
@@ -161,9 +169,11 @@ class Network {
       });
       error /= trainSequence.length - 1;
       error = Math.sqrt(error);
+      console.log(iter, error);
       iter++;
+
       graph.push({ x: iter, y: error });
-    } while (iter < iterations && error > 0.08);
+    } while (iter < iterations && error > 0.008);
     dataReturnCallback(graph);
   }
 }
