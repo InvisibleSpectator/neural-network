@@ -10,11 +10,11 @@ import {
 
 import Network from "./Network";
 
-import sample from "./functionSample.json";
-import etalon from "./functionTest.json";
+//import sample from "./functionSample.json";
+//import etalon from "./functionTest.json";
 
-//import sample from "./realSample.json";
-//import etalon from "./realTest.json";
+import sample from "./realSample.json";
+import etalon from "./realTest.json";
 
 const normaliser = Math.sqrt(sample.reduce((acc, e) => acc + e ** 2, 0));
 const normalisedSample = sample.map((e) => e / normaliser);
@@ -271,8 +271,15 @@ class GUI extends React.Component {
                   (etalon.length - 2)
               )}
             </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Ответ сети</span>
+              <span>Эталон</span>
+            </div>
             {this.state.answer.map((e, i) => (
-              <div>{e + " " + etalon[i]}</div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{e.toFixed(1)}</span>
+                <span>{etalon[i]}</span>
+              </div>
             ))}
           </div>
         </div>
