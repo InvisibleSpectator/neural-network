@@ -10,12 +10,30 @@ import {
 
 import Network from "./Network";
 
-import train from "./seeds.json";
-import test from "./test.json";
+import sample from "./functionSample.json";
+import etalon from "./functionTest.json";
+
+//import sample from "./realSample.json";
+//import etalon from "./realTest.json";
+
+const normaliser = Math.sqrt(sample.reduce((acc, e) => acc + e ** 2, 0));
+const normalisedSample = sample.map((e) => e / normaliser);
+const windowSize = 3;
+
+let train = [];
+let test = [];
+
+for (let i = 0; i < normalisedSample.length - windowSize; i++) {
+  train.push([
+    normalisedSample.slice(i, i + windowSize),
+    normalisedSample.slice(i + windowSize, i + windowSize + 1),
+  ]);
+}
 
 class GUI extends React.Component {
   constructor() {
     super();
+
     this.state = {
       errors: [],
       speed: 0.5,
@@ -24,6 +42,7 @@ class GUI extends React.Component {
       inputs: 1,
       outputs: 1,
       layers: [],
+      answer: [],
     };
     this.state.network = new Network(
       this.state.layers,
@@ -69,14 +88,6 @@ class GUI extends React.Component {
   };
 
   render = () => {
-    let answer = [];
-    let correctCount = test.reduce((acc, e, i) => {
-      let response = this.state.network.getResponse(e[0]);
-      answer.push(
-        response.indexOf(Math.max.apply(null, response)) + " " + e[1].indexOf(1)
-      );
-      return acc + e[1][response.indexOf(Math.max.apply(null, response))];
-    }, 0);
     return (
       <div style={{ display: "flex" }}>
         <div>
@@ -123,6 +134,18 @@ class GUI extends React.Component {
                   this.updateErrors,
                   this.state.momentum
                 );
+                test = normalisedSample.slice(
+                  normalisedSample.length - windowSize
+                );
+                let answer = [];
+                for (let i = 0; i < 5; i++) {
+                  let response = this.state.network.getResponse(
+                    test.slice(i, i + windowSize)
+                  )[0];
+                  test.push(response);
+                  answer.push(response * normaliser);
+                }
+                this.setState({ answer });
               }}
             >
               Учить
@@ -240,9 +263,16 @@ class GUI extends React.Component {
             <Tooltip />
           </LineChart>
           <div>
-            <div> {correctCount}</div>
-            {answer.map((e) => (
-              <div>{e}</div>
+            <div>
+              {Math.sqrt(
+                this.state.answer.reduce((acc, e, i) => {
+                  return acc + ((e - etalon[i]) / normaliser) ** 2;
+                }, 0) /
+                  (etalon.length - 2)
+              )}
+            </div>
+            {this.state.answer.map((e, i) => (
+              <div>{e + " " + etalon[i]}</div>
             ))}
           </div>
         </div>

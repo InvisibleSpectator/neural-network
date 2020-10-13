@@ -173,7 +173,7 @@ class Network {
       iter++;
 
       graph.push({ x: iter, y: error });
-    } while (iter < iterations && error > 0.008);
+    } while (iter < iterations && error > 0.00008);
     dataReturnCallback(graph);
   }
 }
